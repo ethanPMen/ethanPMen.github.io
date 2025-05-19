@@ -17,6 +17,7 @@
     }
     #editor {
       height: 60vh;
+      width: 100%;
     }
     #terminal {
       height: 30vh;
@@ -48,13 +49,13 @@
   <script>
     // Firebase setup
     const firebaseConfig = {
-        apiKey: "AIzaSyAIbLhAvrXYWUHGAxdgsx8gKYXLyT8Fyag",
-        authDomain: "picobot-965f3.firebaseapp.com",
-        databaseURL: "https://picobot-965f3-default-rtdb.firebaseio.com",
-        projectId: "picobot-965f3",
-        storageBucket: "picobot-965f3.firebasestorage.app",
-        messagingSenderId: "863757121308",
-        appId: "1:863757121308:web:51e9d72c23e216d9eeecd9"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -69,6 +70,8 @@
         language: "python",
         theme: "vs-dark",
       });
+      window.addEventListener("resize", () => editor.layout());
+      editor.layout();
     });
 
     async function connectToSerial() {
