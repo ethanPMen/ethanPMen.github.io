@@ -1,1 +1,111 @@
-Hello World
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XRP Web IDE</title>
+  <script src="https://unpkg.com/monaco-editor@0.34.1/min/vs/loader.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    #editor {
+      height: 60vh;
+    }
+    #terminal {
+      height: 30vh;
+      background: #111;
+      color: #0f0;
+      padding: 10px;
+      overflow-y: auto;
+      font-family: monospace;
+    }
+    #controls {
+      padding: 10px;
+      background: #eee;
+    }
+    button {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <button id="connect">Connect</button>
+    <button id="upload">Upload Code</button>
+  </div>
+  <div id="editor"></div>
+  <div id="terminal">[Terminal Output]</div>
+
+  <script>
+    let port, writer, reader;
+    let editor;
+
+    require.config({ paths: { vs: 'https://unpkg.com/monaco-editor@0.34.1/min/vs' } });
+    require(["vs/editor/editor.main"], function () {
+      editor = monaco.editor.create(document.getElementById("editor"), {
+        value: "print('Hello XRP')\n",
+        language: "python",
+        theme: "vs-dark",
+      });
+    });
+
+    async function connectToSerial() {
+      try {
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 115200 });
+        writer = port.writable.getWriter();
+        reader = port.readable.getReader();
+        readSerial();
+        log("[Connected to robot]");
+      } catch (err) {
+        log(`[Error] ${err.message}`);
+      }
+    }
+
+    async function uploadCode() {
+      const code = editor.getValue().split("\n");
+      if (!writer) {
+        log("[Not connected]");
+        return;
+      }
+      for (let line of code) {
+        await writer.write(new TextEncoder().encode(line + "\r"));
+        await delay(50); // delay between lines
+      }
+      log("[Code sent]");
+    }
+
+    async function readSerial() {
+      while (true) {
+        try {
+          const { value, done } = await reader.read();
+          if (done) break;
+          const text = new TextDecoder().decode(value);
+          log(text);
+        } catch (e) {
+          log("[Read error]", e);
+          break;
+        }
+      }
+    }
+
+    function log(message) {
+      const terminal = document.getElementById("terminal");
+      terminal.textContent += "\n" + message;
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    document.getElementById("connect").onclick = connectToSerial;
+    document.getElementById("upload").onclick = uploadCode;
+  </script>
+</body>
+</html>
