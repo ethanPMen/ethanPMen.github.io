@@ -26,6 +26,17 @@
       padding: 10px;
       overflow-y: auto;
       font-family: monospace;
+      white-space: pre-wrap;
+    }
+    #terminalInput {
+      width: 100%;
+      box-sizing: border-box;
+      border: none;
+      padding: 5px;
+      font-family: monospace;
+      font-size: 14px;
+      background: #111;
+      color: #0f0;
     }
     #controls {
       padding: 10px;
@@ -40,22 +51,24 @@
   <div id="controls">
     <button id="connect">Connect</button>
     <button id="upload">Upload Code</button>
+    <button id="run">Run Code</button>
     <button id="save">Save Code</button>
     <button id="load">Load Code</button>
   </div>
   <div id="editor"></div>
   <div id="terminal">[Terminal Output]</div>
+  <input type="text" id="terminalInput" placeholder="Type here (type 'clear' to clear the terminal)..." />
 
   <script>
     // Firebase setup
     const firebaseConfig = {
-        apiKey: "AIzaSyAIbLhAvrXYWUHGAxdgsx8gKYXLyT8Fyag",
-        authDomain: "picobot-965f3.firebaseapp.com",
-        databaseURL: "https://picobot-965f3-default-rtdb.firebaseio.com",
-        projectId: "picobot-965f3",
-        storageBucket: "picobot-965f3.firebasestorage.app",
-        messagingSenderId: "863757121308",
-        appId: "1:863757121308:web:51e9d72c23e216d9eeecd9"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -88,16 +101,33 @@
     }
 
     async function uploadCode() {
-      const code = editor.getValue().split("\n");
+      const code = editor.getValue();
       if (!writer) {
         log("[Not connected]");
         return;
       }
-      for (let line of code) {
-        await writer.write(new TextEncoder().encode(line + "\r"));
-        await delay(50);
+      log("[Interrupting]");
+      await writer.write(new TextEncoder().encode('\x03'));
+      await delay(100);
+      log("[Entering file write mode]");
+      await writer.write(new TextEncoder().encode("f = open('run.py', 'w')\r"));
+      for (let line of code.split("\n")) {
+        await writer.write(new TextEncoder().encode(`f.write('${line.replace(/'/g, "\\'")}\\n')\r`));
+        await delay(20);
       }
-      log("[Code sent]");
+      await writer.write(new TextEncoder().encode("f.close()\r"));
+      log("[Code uploaded as run.py]");
+    }
+
+    async function runCode() {
+      if (!writer) {
+        log("[Not connected]");
+        return;
+      }
+      log("[Running run.py]");
+      await writer.write(new TextEncoder().encode("\x03\r")); // Stop running code
+      await delay(100);
+      await writer.write(new TextEncoder().encode("exec(open('run.py').read())\r"));
     }
 
     async function readSerial() {
@@ -144,8 +174,21 @@
 
     document.getElementById("connect").onclick = connectToSerial;
     document.getElementById("upload").onclick = uploadCode;
+    document.getElementById("run").onclick = runCode;
     document.getElementById("save").onclick = saveCodeToFirebase;
     document.getElementById("load").onclick = loadCodeFromFirebase;
+
+    document.getElementById("terminalInput").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        const input = e.target.value.trim();
+        if (input.toLowerCase() === "clear") {
+          document.getElementById("terminal").textContent = "";
+        } else {
+          log(`[You typed] ${input}`);
+        }
+        e.target.value = "";
+      }
+    });
   </script>
 </body>
 </html>
