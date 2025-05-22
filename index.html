@@ -52,6 +52,7 @@
     <button id="connect">Connect</button>
     <button id="upload">Upload Code</button>
     <button id="run">Run Code</button>
+    <button id="stop">Stop Code</button>
     <button id="save">Save Code</button>
     <button id="load">Load Code</button>
   </div>
@@ -130,6 +131,15 @@
       await writer.write(new TextEncoder().encode("exec(open('run.py').read())\r"));
     }
 
+    async function stopCode() {
+      if (!writer) {
+        log("[Not Connected]");
+        return;
+      }
+      log("[Stopping code]");
+      await writer.write(new TextEncoder().encode("\x03\r"));
+    }
+
     async function readSerial() {
       while (true) {
         try {
@@ -175,6 +185,7 @@
     document.getElementById("connect").onclick = connectToSerial;
     document.getElementById("upload").onclick = uploadCode;
     document.getElementById("run").onclick = runCode;
+    document.getElementById("stop").onclick = stopCode;
     document.getElementById("save").onclick = saveCodeToFirebase;
     document.getElementById("load").onclick = loadCodeFromFirebase;
 
