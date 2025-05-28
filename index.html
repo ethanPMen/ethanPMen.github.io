@@ -6,6 +6,7 @@
   <title>picobot</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://unpkg.com/monaco-editor@0.34.1/min/vs/loader.js"></script>
   <style>
     body {
@@ -55,6 +56,7 @@
     <button id="stop">Stop Code</button>
     <button id="save">Save Code</button>
     <button id="load">Load Code</button>
+    <button id="login">Login</button>
   </div>
   <div id="editor"></div>
   <div id="terminal">[Terminal Output]</div>
@@ -74,8 +76,24 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let port, writer, reader;
-    let editor;
+    let port, writer, reader, editor;
+    let currentUsername = null;
+
+    firebase.auth().signInAnonymously().then(() => {
+      log("[Signed in anonymously]");
+    }).catch((error) => {
+      console.error("[Auth Error]", error);
+    });
+
+    function promptUsername() {
+      const username = prompt("Enter your username:");
+      if (username) {
+        currentUsername = username;
+        log(`[Logged in as ${username}]`);
+      } else {
+        log("[Username is required to save/load code]");
+      }
+    }
 
     require.config({ paths: { vs: 'https://unpkg.com/monaco-editor@0.34.1/min/vs' } });
     require(["vs/editor/editor.main"], function () {
@@ -165,19 +183,21 @@
     }
 
     function saveCodeToFirebase() {
+      if (!currentUsername) return log("[Login required]");
       const code = editor.getValue();
-      db.ref("userCode/latest").set({ code });
+      db.ref("userCode/" + currentUsername).set({ code });
       log("[Code saved to cloud]");
     }
 
     function loadCodeFromFirebase() {
-      db.ref("userCode/latest").once("value").then(snapshot => {
+      if (!currentUsername) return log("[Login required]");
+      db.ref("userCode/" + currentUsername).once("value").then(snapshot => {
         const data = snapshot.val();
         if (data && data.code) {
           editor.setValue(data.code);
           log("[Code loaded from cloud]");
         } else {
-          log("[No code found in cloud]");
+          log("[No code found for this user]");
         }
       });
     }
@@ -188,6 +208,7 @@
     document.getElementById("stop").onclick = stopCode;
     document.getElementById("save").onclick = saveCodeToFirebase;
     document.getElementById("load").onclick = loadCodeFromFirebase;
+    document.getElementById("login").onclick = promptUsername;
 
     document.getElementById("terminalInput").addEventListener("keydown", function (e) {
       if (e.key === "Enter") {
