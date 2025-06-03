@@ -129,13 +129,13 @@
       await writer.write(new TextEncoder().encode('\x03'));
       await delay(100);
       log("[Entering file write mode]");
-      await writer.write(new TextEncoder().encode("f = open('run.py', 'w')\r"));
+      await writer.write(new TextEncoder().encode("f = open('main.py', 'w')\r"));
       for (let line of code.split("\n")) {
         await writer.write(new TextEncoder().encode(`f.write('${line.replace(/'/g, "\\'")}\\n')\r`));
         await delay(20);
       }
       await writer.write(new TextEncoder().encode("f.close()\r"));
-      log("[Code uploaded as run.py]");
+      log("[Code uploaded as main.py]");
     }
 
     async function runCode() {
@@ -143,10 +143,10 @@
         log("[Not connected]");
         return;
       }
-      log("[Running run.py]");
+      log("[Running main.py]");
       await writer.write(new TextEncoder().encode("\x03\r")); // Stop running code
       await delay(100);
-      await writer.write(new TextEncoder().encode("exec(open('run.py').read())\r"));
+      await writer.write(new TextEncoder().encode("exec(open('main.py').read())\r"));
     }
 
     async function stopCode() {
